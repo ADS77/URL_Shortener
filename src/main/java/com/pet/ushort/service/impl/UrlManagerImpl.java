@@ -1,39 +1,56 @@
 package com.pet.ushort.service.impl;
 
-import com.pet.ushort.model.Url;
+import com.pet.ushort.repository.UrlRepository;
+import com.pet.ushort.service.UrlConverterService;
 import com.pet.ushort.service.manager.UrlManager;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
-import java.util.Base64;
 
 @Service
 @Slf4j
 public class UrlManagerImpl implements UrlManager {
-    @Autowired
-    private RedisTemplate<String,Url> redisTemplate;
+    private static final Logger logger = LoggerFactory.getLogger(UrlManagerImpl.class);
+    private final UrlRepository urlRepository;
+    private final UrlConverterService urlConverterService;
 
-    @Override
-    public String getUrlByKey(String key) {
-        Url url = redisTemplate.opsForValue().get(key);
-        return url.getUrl();
+    @Autowired
+    public UrlManagerImpl(UrlRepository urlRepository, UrlConverterService urlConverterService) {
+        this.urlRepository = urlRepository;
+        this.urlConverterService = urlConverterService;
     }
 
     @Override
-    public Url shortenUrl(String url) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            byte[] hashBytes = messageDigest.digest(url.getBytes(StandardCharsets.UTF_8));
-            String key = Base64.getUrlEncoder().withoutPadding().encodeToString(hashBytes);
-            return Url.builder().key(key).createdAt(LocalDateTime.now()).url(url).build();
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not found" + e.getMessage());
+    public String getUrlByID(String key) {
+        if(key == null){
+            return "key can not be empty !";
         }
+        long id = urlConverterService.decode(key);
+        logger.info("key = "+ key);
+        logger.info("id = " + id);
+        String url = urlRepository.getLongUrl(id);
+        logger.info("longUrl : "+ url);
+        return url;
+    }
+
+    @Override
+    public String shortenUrl(String localUrl, String longUrl) {
+        long id = urlRepository.incrementId();
+        String key = urlConverterService.encode(id);
+        urlRepository.saveUrl(id, longUrl);
+        String baseString = formatUrl(localUrl);
+        return (baseString+key);
+    }
+
+    private String formatUrl(String localUrl){
+        String[] components = localUrl.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (String component : components) {
+            sb.append(component);
+        }
+        sb.append("/");
+        return sb.toString();
     }
 }

@@ -1,13 +1,14 @@
 package com.pet.ushort.service.manager;
 
-import com.pet.ushort.model.Url;
+import com.pet.ushort.model.ShortenRequest;
+import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
-@Validated
+@Service
 public interface UrlManager {
-    public String getUrlByKey(@NotBlank String key);
-    public Url shortenUrl(@NotNull String url);
+    public String getUrlByID( String key) ;
+    public String shortenUrl(String localUrl, String longUrl);
 }

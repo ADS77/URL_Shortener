@@ -10,17 +10,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
-@Slf4j
 public class UrlManagerImpl implements UrlManager {
     private static final Logger logger = LoggerFactory.getLogger(UrlManagerImpl.class);
-    private final UrlRepository urlRepository;
-    private final UrlConverterService urlConverterService;
-
     @Autowired
-    public UrlManagerImpl(UrlRepository urlRepository, UrlConverterService urlConverterService) {
-        this.urlRepository = urlRepository;
-        this.urlConverterService = urlConverterService;
-    }
+    private  UrlRepository urlRepository;
+    @Autowired
+    private  UrlConverterService urlConverterService;
+
 
     @Override
     public String getUrlByID(String key) {

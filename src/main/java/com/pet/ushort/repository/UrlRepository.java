@@ -1,5 +1,7 @@
 package com.pet.ushort.repository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -7,14 +9,12 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class UrlRepository {
-    private final RedisTemplate<String, String> redisTemplate;
+    private static Logger logger = LoggerFactory.getLogger(UrlRepository.class);
+    @Autowired
+    private  RedisTemplate<String, String> redisTemplate;
     private final String idKey = "id";
     private final String urlKeyPrefix = "url:";
 
-    @Autowired
-    public UrlRepository(RedisTemplate<String,String> redisTemplate) {
-        this.redisTemplate = redisTemplate;
-    }
 
     public long incrementId(){
         ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
@@ -24,6 +24,7 @@ public class UrlRepository {
 
     public void saveUrl(long id, String longUrl){
         ValueOperations<String,String> valueOperations = redisTemplate.opsForValue();
+        logger.info("Saving as Key = "+ urlKeyPrefix+id);
         valueOperations.set(urlKeyPrefix+id, longUrl);
     }
 

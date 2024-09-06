@@ -1,53 +1,68 @@
 package com.pet.ushort.controller;
-
 import com.pet.ushort.model.ShortenRequest;
 import com.pet.ushort.service.UrlValidatorService;
 import com.pet.ushort.service.manager.UrlManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.view.RedirectView;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-@Controller
 @RestController
 @RequestMapping(value = "/urlShortener")
 public class UrlController {
     @Autowired
-    private  UrlManager urlManager;
+    private Environment env;
+    @Autowired
+    private UrlManager urlManager;
     @Autowired
     private UrlValidatorService validatorService;
     private Logger logger = LoggerFactory.getLogger(UrlController.class);
 
-
     @PostMapping(value = "/shortenUrl", consumes = {"application/json"})
-    public String shortenUrl(@RequestBody final ShortenRequest shortenRequest) throws Exception {
+    public ResponseEntity<Map<String, String>> shortenUrl(@RequestBody final ShortenRequest shortenRequest) {
         String longUrl = shortenRequest.getUrl();
-
-        String shortenedUrl = "";
-        if( validatorService.isValidUrl(longUrl)){
-            String localUrl = "ad/ushort";
-            shortenedUrl = urlManager.shortenUrl(localUrl,longUrl);
-            logger.info("short url : "+ shortenedUrl);
-            return shortenedUrl;
+        if (!validatorService.isValidUrl(longUrl)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Invalid URL"));
         }
-        else {
-            throw new Exception("Invalid Url");
-        }
+        //String localUrl = "ad/ushort";
+        //String shortenedUrl = urlManager.shortenUrl(localUrl, longUrl);
+        String baseUrl = env.getProperty("shortener.base-url", "http://localhost:8080/ad/ushort");
+        String shortenedUrl = urlManager.shortenUrl(baseUrl, longUrl);
+        logger.info("Short URL generated: " + shortenedUrl);
 
+        Map<String, String> response = new HashMap<>();
+        response.put("shortUrl", shortenedUrl);
+        return ResponseEntity.ok(response);
     }
 
-    @GetMapping(value = "/{key}")
-    public RedirectView redirectUrl(@PathVariable String key){
-        String redirectUrl = urlManager.getUrlByID(key);
-        RedirectView redirectView = new RedirectView();
-        redirectView.setUrl(redirectUrl);
-        return redirectView;
+    @GetMapping(value = "/redirect{key}")
+    public ResponseEntity<Map<String, String>> getLongUrl(@PathVariable String key) {
+        logger.info("Redirect hit...");
+        if (key != null) {
+            logger.info("key = ", key);
+            String longUrl = urlManager.getUrlByID(key);
+            if (longUrl != null) {
+                Map<String, String> response = new HashMap<>();
+                response.put("longUrl", longUrl);
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Collections.singletonMap("error", "URL not found"));
+            }
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Collections.singletonMap("error", "Invalid key"));
+        }
     }
-
-
 }
+
+
+
+
